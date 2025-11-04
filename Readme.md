@@ -144,3 +144,51 @@ CREATE TABLE contexts (
 这个基于 MySQL 的设计在结构上更加清晰和可扩展。
 
 接下来，我们是讨论如何用 Python (例如 `mysql-connector-python` 库) 来编写实现这个数据库连接和操作的代码，还是您想对这个数据库 Schema（表结构）进行调整？
+-----
+
+## 🛠️ 实现概览
+
+项目在 `src/notion_vocabulary` 目录下实现了一个从文本到 MySQL 的完整流水线：
+
+- `text_processing.py` 利用 spaCy 进行分词、停用词过滤、词形还原，并收集例句。
+- `repository.py` 封装所有 MySQL 读写逻辑，实现单词与例句的查询/更新。
+- `pipeline.py` 负责协调整个流程：处理文本、写入数据库、返回处理结果。
+- `__main__.py` 提供 CLI，支持从文件或目录读取文本，并输出 JSON 结果。
+
+数据库建表语句位于 `sql/schema.sql`，可直接在 MySQL 中执行。
+
+### 🚀 快速开始
+
+1. 安装依赖：
+
+   ```bash
+   pip install -r requirements.txt
+   python -m spacy download en_core_web_sm
+   ```
+
+2. 初始化数据库：
+
+   ```bash
+   mysql -u <user> -p <database> < sql/schema.sql
+   ```
+
+3. 运行 CLI：
+
+   ```bash
+   python -m notion_vocabulary path/to/texts.txt \
+       --host localhost --port 3306 --user <user> --password <password> --database vocab_db
+   ```
+
+   如果希望保存处理结果，可添加 `--output output.json`。
+
+### 📦 PipelineResult 字段含义
+
+CLI 会输出一个 JSON 数组，每个对象包含：
+
+- `lemma`: 词形还原后的单词
+- `sentence`: 对应的例句
+- `created`: 是否新增了该单词
+- `frequency_updated`: 是否更新了词频
+- `context_inserted`: 是否新增了例句
+
+这样即可快速了解本次处理对数据库的实际影响。
