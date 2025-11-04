@@ -36,21 +36,24 @@ class VocabularyPipeline:
     def process_text(self, text: str) -> list[PipelineResult]:
         """Process a single piece of text and persist all relevant tokens."""
 
-        results: list[PipelineResult] = []
-        for token in self._processor.iter_processed_tokens(text):
-            upsert_result = self._repository.upsert_word_with_context(
-                token.lemma, token.sentence
+        tokens = list(self._processor.iter_processed_tokens(text))
+        if not tokens:
+            return []
+
+        upsert_results = self._repository.upsert_many_words_with_context(
+            (token.lemma, token.sentence) for token in tokens
+        )
+
+        return [
+            PipelineResult(
+                lemma=token.lemma,
+                sentence=token.sentence,
+                created=result.created,
+                frequency_updated=result.frequency_updated,
+                context_inserted=result.context_inserted,
             )
-            results.append(
-                PipelineResult(
-                    lemma=token.lemma,
-                    sentence=token.sentence,
-                    created=upsert_result.created,
-                    frequency_updated=upsert_result.frequency_updated,
-                    context_inserted=upsert_result.context_inserted,
-                )
-            )
-        return results
+            for token, result in zip(tokens, upsert_results)
+        ]
 
     def process_many(self, texts: Iterable[str]) -> list[PipelineResult]:
         """Process multiple pieces of text."""

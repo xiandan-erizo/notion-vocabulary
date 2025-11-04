@@ -33,14 +33,16 @@ class PipelineTests(TestCase):
         processor = DummyProcessor(tokens)
         pipeline = VocabularyPipeline(self.config, processor=processor)  # type: ignore[arg-type]
         pipeline._repository = MagicMock()  # type: ignore[attr-defined]
-        pipeline._repository.upsert_word_with_context.return_value = MagicMock(
-            created=True, frequency_updated=False, context_inserted=True
-        )
+        pipeline._repository.upsert_many_words_with_context.return_value = [
+            MagicMock(created=True, frequency_updated=False, context_inserted=True)
+        ]
 
         results = pipeline.process_text("irrelevant")
 
-        pipeline._repository.upsert_word_with_context.assert_called_once_with(
-            "example", "An example sentence."
+        pipeline._repository.upsert_many_words_with_context.assert_called_once()
+        args, _ = pipeline._repository.upsert_many_words_with_context.call_args
+        self.assertEqual(
+            list(args[0]), [("example", "An example sentence.")]
         )
         self.assertEqual(
             results,

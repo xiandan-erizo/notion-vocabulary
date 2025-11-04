@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import asdict
 from datetime import datetime
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING, Iterable, Iterator, Optional
 
 from .config import DatabaseConfig
 from .models import Context, Word, WordStatus, WordUpsertResult, parse_status
@@ -60,24 +60,40 @@ class VocabularyRepository:
         """Insert or update a word and attach the provided context."""
 
         with self._cursor() as cursor:
-            cursor.execute("SELECT id, frequency FROM words WHERE word = %s", (word,))
-            row = cursor.fetchone()
-            if row is None:
-                word_id = self._insert_word(cursor, word)
-                created = True
-                frequency_updated = False
-            else:
-                word_id = int(row["id"])
-                created = False
-                frequency_updated = self._increment_frequency(cursor, word_id)
+            return self._upsert_word_with_context(cursor, word, sentence)
 
-            context_inserted = self._insert_context(cursor, word_id, sentence)
-            cursor.execute(
-                "SELECT id, word, frequency, status, first_seen, last_seen "
-                "FROM words WHERE id = %s",
-                (word_id,),
-            )
-            word_row = cursor.fetchone()
+    def upsert_many_words_with_context(
+        self, items: Iterable[tuple[str, str]]
+    ) -> list[WordUpsertResult]:
+        """Persist multiple words and contexts using a single database connection."""
+
+        results: list[WordUpsertResult] = []
+        with self._cursor() as cursor:
+            for word, sentence in items:
+                results.append(self._upsert_word_with_context(cursor, word, sentence))
+        return results
+
+    def _upsert_word_with_context(
+        self, cursor: MySQLCursorDict, word: str, sentence: str
+    ) -> WordUpsertResult:
+        cursor.execute("SELECT id, frequency FROM words WHERE word = %s", (word,))
+        row = cursor.fetchone()
+        if row is None:
+            word_id = self._insert_word(cursor, word)
+            created = True
+            frequency_updated = False
+        else:
+            word_id = int(row["id"])
+            created = False
+            frequency_updated = self._increment_frequency(cursor, word_id)
+
+        context_inserted = self._insert_context(cursor, word_id, sentence)
+        cursor.execute(
+            "SELECT id, word, frequency, status, first_seen, last_seen "
+            "FROM words WHERE id = %s",
+            (word_id,),
+        )
+        word_row = cursor.fetchone()
         if word_row is None:  # pragma: no cover - highly unlikely
             raise RuntimeError("Failed to fetch word after upsert operation")
         return WordUpsertResult(
