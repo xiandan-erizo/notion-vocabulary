@@ -126,3 +126,10 @@ class APITests(TestCase):
         response = self.client.get("/api/v1/health")
         self.assertEqual(200, response.status_code)
         self.assertEqual({"status": "ok"}, response.json())
+
+    def test_landing_page_returns_html(self) -> None:
+        response = self.client.get("/")
+        self.assertEqual(200, response.status_code)
+        self.assertEqual("text/html; charset=utf-8", response.headers["content-type"])
+        self.assertIn("Notion Vocabulary Service", response.text)
+        self.assertIn("无需登录", response.text)

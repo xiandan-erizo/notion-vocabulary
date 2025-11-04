@@ -8,6 +8,7 @@ from functools import lru_cache
 from typing import Optional, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, conint
 
 from .config import DatabaseConfig
@@ -113,6 +114,52 @@ class StatusUpdateRequest(BaseModel):
 
 
 app = FastAPI(title="Notion Vocabulary API", version="1.0.0")
+
+
+@app.get("/", response_class=HTMLResponse)
+def landing_page() -> str:
+    """Render a very small landing page for the service."""
+
+    return """
+    <!DOCTYPE html>
+    <html lang=\"en\">
+      <head>
+        <meta charset=\"utf-8\" />
+        <title>Notion Vocabulary Service</title>
+        <style>
+          body { font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 3rem 1.5rem; background: #f6f8fb; }
+          main { max-width: 640px; margin: 0 auto; background: white; padding: 2.5rem 2rem; border-radius: 16px; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12); }
+          h1 { margin-top: 0; color: #0f172a; font-size: 2rem; }
+          p { color: #334155; line-height: 1.6; }
+          code { background: #e2e8f0; border-radius: 4px; padding: 0.2rem 0.4rem; }
+          a { color: #2563eb; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+          ul { padding-left: 1.25rem; }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>Notion Vocabulary Service</h1>
+          <p>
+            欢迎来到词汇处理服务！该站点无需登录即可使用，
+            你可以直接调用提供的 API 接口来分析文本并维护你的单词本。
+          </p>
+          <p>
+            尝试以下端点来开始：
+          </p>
+          <ul>
+            <li><code>POST /api/v1/texts</code>：提交一段文本并获取解析结果。</li>
+            <li><code>POST /api/v1/texts/batch</code>：批量处理多条文本。</li>
+            <li><code>GET /api/v1/words</code>：查看词汇列表及其状态。</li>
+            <li><code>GET /api/v1/words/&lt;lemma&gt;</code>：查看单词详情及上下文。</li>
+          </ul>
+          <p>
+            你也可以访问 <a href=\"/docs\">交互式 API 文档</a>，在浏览器中试用所有接口。
+          </p>
+        </main>
+      </body>
+    </html>
+    """
 
 
 def _status_from_query(value: Optional[str]) -> Optional[WordStatus]:
