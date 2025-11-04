@@ -199,6 +199,23 @@ CREATE TABLE contexts (
 
 项目在 `src/notion_vocabulary` 目录下实现了一个从文本到 MySQL 的完整流水线：
 
+-----
+
+### 🌐 API 服务
+
+项目现在提供了一个基于 **FastAPI** 的 HTTP 接口，便于与前端或其他系统集成。
+
+- 启动命令：`uvicorn notion_vocabulary.api:app --host 0.0.0.0 --port 8000`
+- 主要接口：
+  - `POST /api/v1/texts`：提交一段文本并返回处理结果。
+  - `POST /api/v1/texts/batch`：批量提交文本。
+  - `GET /api/v1/words`：分页检索单词摘要，支持状态、频次过滤。
+  - `GET /api/v1/words/{lemma}`：返回单词详情和上下文。
+  - `PATCH /api/v1/words/{lemma}`：更新学习状态。
+  - `GET /api/v1/health`：健康检查。
+
+所有接口均在 `/api/v1` 命名空间下，并通过 FastAPI 自动生成 OpenAPI 文档，可访问 `/docs` 进行交互式调试。
+
 - `text_processing.py` 利用 spaCy 进行分词、停用词过滤、词形还原，并收集例句。
 - `repository.py` 封装所有 MySQL 读写逻辑，实现单词与例句的查询/更新。
 - `pipeline.py` 负责协调整个流程：处理文本、写入数据库、返回处理结果。

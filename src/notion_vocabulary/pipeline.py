@@ -71,3 +71,9 @@ class VocabularyPipeline:
     @property
     def processor(self) -> TokenProcessor:
         return self._processor
+
+    @property
+    def repository(self) -> VocabularyRepository:
+        """Expose the underlying repository for read-only access."""
+
+        return self._repository

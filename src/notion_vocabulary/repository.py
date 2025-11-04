@@ -73,6 +73,70 @@ class VocabularyRepository:
                 results.append(self._upsert_word_with_context(cursor, word, sentence))
         return results
 
+    def list_words(
+        self,
+        *,
+        status: Optional[WordStatus] = None,
+        min_frequency: Optional[int] = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Word]:
+        """Return a filtered, paginated collection of words."""
+
+        clauses: list[str] = []
+        params: list[object] = []
+        if status is not None:
+            clauses.append("status = %s")
+            params.append(status.value)
+        if min_frequency is not None:
+            clauses.append("frequency >= %s")
+            params.append(min_frequency)
+
+        query = (
+            "SELECT id, word, frequency, status, first_seen, last_seen "
+            "FROM words"
+        )
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY last_seen DESC, id DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+
+        with self._cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
+        return [self._row_to_word(row) for row in rows]
+
+    def update_word_status(self, word: str, status: WordStatus) -> Optional[Word]:
+        """Set the study status for ``word`` and return the updated row."""
+
+        with self._cursor() as cursor:
+            cursor.execute(
+                "UPDATE words SET status = %s WHERE word = %s",
+                (status.value, word),
+            )
+            if cursor.rowcount == 0:
+                return None
+            cursor.execute(
+                "SELECT id, word, frequency, status, first_seen, last_seen "
+                "FROM words WHERE word = %s",
+                (word,),
+            )
+            row = cursor.fetchone()
+        if row is None:  # pragma: no cover - defensive
+            return None
+        return self._row_to_word(row)
+
+    def ping(self) -> bool:
+        """Return ``True`` when the database connection can execute queries."""
+
+        try:
+            with self._cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+        except Exception:
+            return False
+        return True
+
     def _upsert_word_with_context(
         self, cursor: MySQLCursorDict, word: str, sentence: str
     ) -> WordUpsertResult:
@@ -159,7 +223,8 @@ class VocabularyRepository:
             if word_row is None:
                 return None
             cursor.execute(
-                "SELECT id, word_id, sentence FROM contexts WHERE word_id = %s",
+                "SELECT id, word_id, sentence FROM contexts WHERE word_id = %s"
+                " ORDER BY id DESC",
                 (word_row["id"],),
             )
             contexts = cursor.fetchall()
