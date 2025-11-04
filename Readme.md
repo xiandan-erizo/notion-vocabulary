@@ -1,3 +1,52 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    python -m spacy download en_core_web_sm
+
+COPY . .
+
+CMD ["python", "-m", "notion_vocabulary"]
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: notion_vocab_db
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: vocab_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./data/mysql:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: notion_vocabulary_app
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=vocab_db
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+    restart: on-failure
+    command: >
+      sh -c "
+      sleep 10 &&
+      python -m notion_vocabulary /app/input --host $${DB_HOST} --port $${DB_PORT}
+        --user $${DB_USER} --password $${DB_PASSWORD} --database $${DB_NAME}
+        --output /app/output/results.json
+      "
 好的，使用MySQL数据库是一个非常好的选择，这能让系统更健壮、更持久化，也便于未来进行更复杂的数据查询。
 
 我们来更新一下文档，将数据存储层从“键值对”改为“MySQL”。

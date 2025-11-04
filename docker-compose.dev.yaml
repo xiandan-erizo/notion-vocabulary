@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=vocab_db
+    volumes:
+      - ./src:/app/src
+      - ./input:/home/app/input
+    ports:
+      - "8000:8000"
+    command: >
+      bash -c "
+        sleep 10 &&
+        uvicorn notion_vocabulary.api:app --host 0.0.0.0 --port 8000 --reload"
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: vocab_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+
+volumes:
+  db_data:

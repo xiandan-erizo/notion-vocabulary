@@ -1,0 +1,1 @@
+This is a sample text for testing the vocabulary system. The system should be able to identify words like testing, vocabulary, and system. It should also handle different forms of words, such as identifies and identified, recognizing them as the same lemma.
