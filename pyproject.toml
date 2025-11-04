@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=67", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "notion-vocabulary"
+version = "0.1.0"
+description = "Automated vocabulary builder backed by MySQL"
+readme = "Readme.md"
+authors = [{name = "Notion Vocabulary"}]
+requires-python = ">=3.10"
+dependencies = [
+    "mysql-connector-python>=8.0",
+    "spacy>=3.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
